@@ -19,6 +19,11 @@ public class Bot {
     commands.put("prefix", event -> setPrefix(event));
   }
 
+  /**
+   * Main method.
+   *
+   * @param args command-line arguments
+   */
   public static void main(String[] args) {
     final DiscordClient client = DiscordClientBuilder.create(args[0]).build();
 
