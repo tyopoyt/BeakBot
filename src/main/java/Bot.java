@@ -1,8 +1,14 @@
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
+import com.sedmelluq.discord.lavaplayer.track.playback.NonAllocatingAudioFrameBuffer;
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.Event;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.MessageChannel;
+import discord4j.voice.AudioProvider;
 import reactor.core.publisher.Mono;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
@@ -23,6 +29,8 @@ public class Bot {
     commands.put("prefix ", Bot::setPrefix);
 
     commands.put("localtime", Bot::tellTime);
+
+    commands.put("play", Bot::play);
   }
 
   /**
@@ -31,6 +39,12 @@ public class Bot {
    * @param args command-line arguments
    */
   public static void main(String[] args) {
+    final AudioPlayerManager audioMan = new DefaultAudioPlayerManager();
+    audioMan.getConfiguration().setFrameBufferFactory(NonAllocatingAudioFrameBuffer::new);
+    AudioSourceManagers.registerRemoteSources(audioMan);
+    final AudioPlayer player = audioMan.createPlayer();
+    AudioProvider provider = new LavaPlayerAudioProvider(player);
+
     final DiscordClient client = DiscordClientBuilder.create(args[0]).build();
 
     client.getEventDispatcher().on(MessageCreateEvent.class)
@@ -48,6 +62,12 @@ public class Bot {
   }
 
 
+  /**
+   * Send a message in a channel.
+   *
+   * @param channel the channel in which to send the message
+   * @param message the message to send
+   */
   private static void sendMessage(Mono<MessageChannel> channel, String message) {
     Objects.requireNonNull(channel.block()).createMessage(message).block();
   }
@@ -72,9 +92,21 @@ public class Bot {
     }
   }
 
+  /**
+   * Send a message telling the time in the bot's timezone.
+   *
+   * @param event the messageEvent
+   */
   private static void tellTime(MessageCreateEvent event) {
     sendMessage(event.getMessage().getChannel(),
             "Bot's local time is: " + dtf.format(LocalDateTime.now()));
+  }
+
+  private static void play(MessageCreateEvent event) {
+    if (event.getMessage().getAuthor().isPresent()) {
+      sendMessage(event.getMessage().getChannel(),
+              event.getMessage().getAuthor().get().getMention());
+    }
   }
 
 }
