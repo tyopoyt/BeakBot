@@ -15,26 +15,28 @@ import discord4j.voice.AudioProvider;
 import reactor.core.publisher.Mono;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class Bot {
 
   private static final Map<String, Command> commands = new HashMap<>();
   private static final AudioPlayerManager audioMan;
   private static final AudioPlayer player;
-  private static AudioProvider audioPro;
+  private static final AudioProvider audioPro;
+  private static final TrackScheduler trackSched;
   private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
   private static String prefix = "!", content = "";
 
   static {
+    //initialize objects required for audio
     audioMan = new DefaultAudioPlayerManager();
     audioMan.getConfiguration().setFrameBufferFactory(NonAllocatingAudioFrameBuffer::new);
     AudioSourceManagers.registerRemoteSources(audioMan);
     player = audioMan.createPlayer();
     audioPro = new LavaPlayerAudioProvider(player);
+    trackSched = new TrackScheduler(player);
 
+    //add commands to our command map
     commands.put("ping", event -> Objects.requireNonNull(event.getMessage()
             .getChannel().block()).createMessage("Pong!").block());
 
@@ -46,8 +48,6 @@ public class Bot {
 
     commands.put("join", Bot::join);
   }
-
-
 
   /**
    * Main method.
@@ -70,7 +70,6 @@ public class Bot {
 
     client.login().block();
   }
-
 
   /**
    * Send a message in a channel.
@@ -130,7 +129,20 @@ public class Bot {
     }
   }
 
+  /**
+   * Play audio in joined channel.
+   *
+   * @param event the messageEvent
+   */
   private static void play(MessageCreateEvent event) {
+    final String content;
+    if (event.getMessage().getContent().isPresent()) {
+      content = event.getMessage().getContent().get();
+      final List<String> command = Arrays.asList(content.split(" "));
+      audioMan.loadItem(command.get(1), trackSched);
+    } else {
+      System.out.println("oof");
+    }
 
   }
 
