@@ -7,7 +7,10 @@ import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.Event;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.VoiceState;
+import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.VoiceChannel;
 import discord4j.voice.AudioProvider;
 import reactor.core.publisher.Mono;
 import java.time.format.DateTimeFormatter;
@@ -19,10 +22,19 @@ import java.util.Objects;
 public class Bot {
 
   private static final Map<String, Command> commands = new HashMap<>();
+  private static final AudioPlayerManager audioMan;
+  private static final AudioPlayer player;
+  private static AudioProvider audioPro;
+  private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
   private static String prefix = "!", content = "";
-  private static DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
 
   static {
+    audioMan = new DefaultAudioPlayerManager();
+    audioMan.getConfiguration().setFrameBufferFactory(NonAllocatingAudioFrameBuffer::new);
+    AudioSourceManagers.registerRemoteSources(audioMan);
+    player = audioMan.createPlayer();
+    audioPro = new LavaPlayerAudioProvider(player);
+
     commands.put("ping", event -> Objects.requireNonNull(event.getMessage()
             .getChannel().block()).createMessage("Pong!").block());
 
@@ -31,7 +43,11 @@ public class Bot {
     commands.put("localtime", Bot::tellTime);
 
     commands.put("play", Bot::play);
+
+    commands.put("join", Bot::join);
   }
+
+
 
   /**
    * Main method.
@@ -39,12 +55,6 @@ public class Bot {
    * @param args command-line arguments
    */
   public static void main(String[] args) {
-    final AudioPlayerManager audioMan = new DefaultAudioPlayerManager();
-    audioMan.getConfiguration().setFrameBufferFactory(NonAllocatingAudioFrameBuffer::new);
-    AudioSourceManagers.registerRemoteSources(audioMan);
-    final AudioPlayer player = audioMan.createPlayer();
-    AudioProvider provider = new LavaPlayerAudioProvider(player);
-
     final DiscordClient client = DiscordClientBuilder.create(args[0]).build();
 
     client.getEventDispatcher().on(MessageCreateEvent.class)
@@ -102,11 +112,26 @@ public class Bot {
             "Bot's local time is: " + dtf.format(LocalDateTime.now()));
   }
 
-  private static void play(MessageCreateEvent event) {
-    if (event.getMessage().getAuthor().isPresent()) {
-      sendMessage(event.getMessage().getChannel(),
-              event.getMessage().getAuthor().get().getMention());
+  /**
+   * Join a user's voice channel.
+   *
+   * @param event the messageEvent
+   */
+  private static void join(MessageCreateEvent event) {
+    final Member member = event.getMember().orElse(null);
+    if (member != null) {
+      final VoiceState voiceState = member.getVoiceState().block();
+      if (voiceState != null) {
+        final VoiceChannel channel = voiceState.getChannel().block();
+        if (channel != null) {
+          channel.join(spec -> spec.setProvider(audioPro)).block();
+        }
+      }
     }
+  }
+
+  private static void play(MessageCreateEvent event) {
+
   }
 
 }
