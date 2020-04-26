@@ -152,15 +152,26 @@ public class Bot {
    * @param event the messageEvent
    */
   private static void play(MessageCreateEvent event) {
-    final String content;
-    if (event.getMessage().getContent().isPresent()) {
-      content = event.getMessage().getContent().get();
-      final List<String> command = Arrays.asList(content.split(" "));
-      audioMan.loadItem(command.get(1), trackSched);
-      sendMessage(event, "Now playing!");
+    if (trackSched.resumeTrack()) {
+      sendMessage(event, "Playback resumed.");
     } else {
-      sendMessage(event, "Content not present... whatever that means...");
+      final String content;
+      if (event.getMessage().getContent().isPresent()) {
+        content = event.getMessage().getContent().get();
+        final List<String> command = Arrays.asList(content.split(" "));
+
+        if (command.size() != 2) {
+          sendMessage(event, String.format("Improper syntax.\n\nTry: %splay [link]", prefix));
+        } else {
+          audioMan.loadItem(command.get(1), trackSched);
+          sendMessage(event, "Now playing!");
+        }
+      } else {
+        sendMessage(event, "Content not present... whatever that means...");
+      }
     }
+
+
   }
 
   /**
