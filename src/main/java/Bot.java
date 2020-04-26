@@ -12,6 +12,7 @@ import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.VoiceChannel;
 import discord4j.voice.AudioProvider;
+import discord4j.voice.VoiceConnection;
 import reactor.core.publisher.Mono;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
@@ -26,7 +27,7 @@ public class Bot {
   private static final TrackScheduler trackSched;
   private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
   private static String prefix = "!", content = "";
-  private static VoiceChannel joined = null;
+  private static VoiceConnection joined = null;
 
   static {
     //initialize objects required for audio
@@ -52,6 +53,10 @@ public class Bot {
     commands.put("stop", Bot::stop);
 
     commands.put("leave", Bot::leave);
+
+    commands.put("pause", Bot::pause);
+
+    commands.put("resume", Bot::resume);
   }
 
   /**
@@ -121,8 +126,7 @@ public class Bot {
       if (voiceState != null) {
         final VoiceChannel channel = voiceState.getChannel().block();
         if (channel != null) {
-          channel.join(spec -> spec.setProvider(audioPro)).block();
-          joined = channel;
+          joined = channel.join(spec -> spec.setProvider(audioPro)).block();
           sendMessage(event, String.format("Joined voice channel: %s!", channel.getMention()));
         }
       } else {
@@ -131,8 +135,15 @@ public class Bot {
     }
   }
 
+  /**
+   * Leave the voice channel.
+   *
+   * @param event the messageEvent
+   */
   private static void leave(MessageCreateEvent event) {
-
+    joined.disconnect();
+    sendMessage(event, "Leaving voice channel.");
+    stop(event);
   }
 
   /**
@@ -141,15 +152,26 @@ public class Bot {
    * @param event the messageEvent
    */
   private static void play(MessageCreateEvent event) {
-    final String content;
-    if (event.getMessage().getContent().isPresent()) {
-      content = event.getMessage().getContent().get();
-      final List<String> command = Arrays.asList(content.split(" "));
-      audioMan.loadItem(command.get(1), trackSched);
-      sendMessage(event, "Now playing!");
+    if (trackSched.resumeTrack()) {
+      sendMessage(event, "Playback resumed.");
     } else {
-      sendMessage(event, "Content not present... whatever that means...");
+      final String content;
+      if (event.getMessage().getContent().isPresent()) {
+        content = event.getMessage().getContent().get();
+        final List<String> command = Arrays.asList(content.split(" "));
+
+        if (command.size() != 2) {
+          sendMessage(event, String.format("Improper syntax.\n\nTry: %splay [link]", prefix));
+        } else {
+          audioMan.loadItem(command.get(1), trackSched);
+          sendMessage(event, "Now playing!");
+        }
+      } else {
+        sendMessage(event, "Content not present... whatever that means...");
+      }
     }
+
+
   }
 
   /**
@@ -161,4 +183,28 @@ public class Bot {
     trackSched.stopTrack();
     sendMessage(event, "Playback stopped.");
   }
+
+  /**
+   * Pause the track.
+   *
+   * @param event the messageEvent
+   */
+  private static void pause(MessageCreateEvent event) {
+    trackSched.pauseTrack();
+    sendMessage(event, "Pausing audio playback.");
+  }
+
+  /**
+   * Resume the paused track, if any.
+   *
+   * @param event the messageEvent
+   */
+  private static void resume(MessageCreateEvent event) {
+    if (trackSched.resumeTrack()) {
+      sendMessage(event, "Playback resumed.");
+    } else {
+      sendMessage(event, "No playback to resume.");
+    }
+  }
+
 }
