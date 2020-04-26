@@ -61,6 +61,10 @@ public class Bot {
     commands.put("resume", Bot::resume);
 
     commands.put("whitelist", Bot::whitelist);
+
+    commands.put("blacklist", Bot::blacklist);
+
+    commands.put("clearlist", Bot::clearlist);
   }
 
   /**
@@ -199,8 +203,6 @@ public class Bot {
         sendMessage(event, "Content not present... whatever that means...");
       }
     }
-
-
   }
 
   /**
@@ -243,7 +245,7 @@ public class Bot {
    */
   private static void whitelist(MessageCreateEvent event) {
     Message message = event.getMessage();
-    if (wblist.isWhiteList()) {
+    if (wblist.isWhiteList() || wblist.isEmpty()) {
       if (!wblist.contains(message.getChannelId())) {
         wblist.add(message.getChannelId());
         sendMessage(event, "Successfully whitelisted this channel.");
@@ -252,7 +254,7 @@ public class Bot {
       }
     } else {
       sendMessage(event, "Currently using a blacklist.\nTo change to a whitelist try "
-                                  + prefix + "clearList white");
+                                  + prefix + "clearlist white");
     }
   }
 
@@ -263,7 +265,10 @@ public class Bot {
    */
   private static void blacklist(MessageCreateEvent event) {
     Message message = event.getMessage();
-    if (wblist.isBlackList()) {
+    if (wblist.isBlackList() || wblist.isEmpty()) {
+      if (wblist.isWhiteList()) {
+        wblist.reset(false);
+      }
       if (!wblist.contains(message.getChannelId())) {
         wblist.add(message.getChannelId());
         sendMessage(event, "Successfully blacklisted this channel.");
@@ -272,7 +277,32 @@ public class Bot {
       }
     } else {
       sendMessage(event, "Currently using a whitelist.\nTo change to a blacklist try "
-              + prefix + "clearList black");
+              + prefix + "clearlist black");
+    }
+  }
+
+  /**
+   * Reset the WBList.
+   *
+   * @param event the messageEvent
+   */
+  private static void clearlist(MessageCreateEvent event) {
+    final String content;
+    if (event.getMessage().getContent().isPresent()) {
+      content = event.getMessage().getContent().get();
+      final List<String> command = Arrays.asList(content.split(" "));
+      if (command.size() != 2
+              || !(command.get(1).equals("black") || command.get(1).equals("white"))) {
+        sendMessage(event, String.format("Improper syntax.\n\nTry: %sclearlist [black/white]",
+                                                                                          prefix));
+      } else {
+        boolean action = command.get(1).equals("white");
+        wblist.reset(action);
+        sendMessage(event, String.format("Successfully reset list to %slist.",
+                action? "white" : "black"));
+      }
+    } else {
+      sendMessage(event, "Content not present... whatever that means...");
     }
   }
 }
