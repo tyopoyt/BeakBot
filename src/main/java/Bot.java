@@ -234,7 +234,27 @@ public class Bot {
       }
     } else {
       sendMessage(event, "Currently using a blacklist.\nTo change to a whitelist try "
-                                  + prefix + "clearList black");
+                                  + prefix + "clearList white");
+    }
+  }
+
+  /**
+   * Add a channel to blackList.
+   *
+   * @param event the messageEvent
+   */
+  private static void blacklist(MessageCreateEvent event) {
+    Message message = event.getMessage();
+    if (wblist.isBlackList()) {
+      if (!wblist.contains(message.getChannelId())) {
+        wblist.add(message.getChannelId());
+        sendMessage(event, "Successfully blacklisted this channel.");
+      } else {
+        sendMessage(event, "This channel is already blacklisted.");
+      }
+    } else {
+      sendMessage(event, "Currently using a whitelist.\nTo change to a blacklist try "
+              + prefix + "clearList black");
     }
   }
 }
