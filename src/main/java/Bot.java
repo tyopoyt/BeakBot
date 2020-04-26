@@ -9,6 +9,7 @@ import discord4j.core.event.domain.Event;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.VoiceState;
 import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.VoiceChannel;
 import discord4j.voice.AudioProvider;
@@ -47,6 +48,8 @@ public class Bot {
     commands.put("play", Bot::play);
 
     commands.put("join", Bot::join);
+
+    commands.put("stop", Bot::stop);
   }
 
   /**
@@ -74,11 +77,11 @@ public class Bot {
   /**
    * Send a message in a channel.
    *
-   * @param channel the channel in which to send the message
+   * @param event the messageEvent
    * @param message the message to send
    */
-  private static void sendMessage(Mono<MessageChannel> channel, String message) {
-    Objects.requireNonNull(channel.block()).createMessage(message).block();
+  private static void sendMessage(MessageCreateEvent event, String message) {
+    Objects.requireNonNull(event.getMessage().getChannel().block()).createMessage(message).block();
   }
 
   /**
@@ -86,18 +89,12 @@ public class Bot {
    *
    * @param event the event triggering this call
    */
-  private static void setPrefix(Event event) {
+  private static void setPrefix(MessageCreateEvent event) {
     try {
       prefix = content.substring(prefix.length() + "prefix ".length());
-      sendMessage(((MessageCreateEvent)event).getMessage().getChannel(),
-              "Prefix set to " + prefix);
-
-      System.out.println( "\\u" + Integer.toHexString(prefix.charAt(0) | 0x10000).substring(1) );
-      //System.out.printf("character: %d\n", (int)prefix.charAt(0));
-
+      sendMessage(event,"Prefix set to " + prefix);
     } catch (StringIndexOutOfBoundsException e) {
-      sendMessage(((MessageCreateEvent)event).getMessage().getChannel(),
-              "Error setting prefix! Kept as: " + prefix);
+      sendMessage(event,"Error setting prefix! Kept as: " + prefix);
     }
   }
 
@@ -107,8 +104,7 @@ public class Bot {
    * @param event the messageEvent
    */
   private static void tellTime(MessageCreateEvent event) {
-    sendMessage(event.getMessage().getChannel(),
-            "Bot's local time is: " + dtf.format(LocalDateTime.now()));
+    sendMessage(event, "Bot's local time is: " + dtf.format(LocalDateTime.now()));
   }
 
   /**
@@ -143,7 +139,14 @@ public class Bot {
     } else {
       System.out.println("oof");
     }
-
   }
 
+  /**
+   * Stop the currently playing track.
+   *
+   * @param event the messageEvent
+   */
+  private static void stop(MessageCreateEvent event) {
+    trackSched.stopTrack();
+  }
 }
