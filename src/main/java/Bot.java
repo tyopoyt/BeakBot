@@ -26,6 +26,7 @@ public class Bot {
   private static final TrackScheduler trackSched;
   private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
   private static String prefix = "!", content = "";
+  private static VoiceChannel joined = null;
 
   static {
     //initialize objects required for audio
@@ -50,7 +51,7 @@ public class Bot {
 
     commands.put("stop", Bot::stop);
 
-    //commands.put("leave", Bot::leave);
+    commands.put("leave", Bot::leave);
   }
 
   /**
@@ -121,12 +122,17 @@ public class Bot {
         final VoiceChannel channel = voiceState.getChannel().block();
         if (channel != null) {
           channel.join(spec -> spec.setProvider(audioPro)).block();
+          joined = channel;
           sendMessage(event, String.format("Joined voice channel: %s!", channel.getMention()));
         }
       } else {
         sendMessage(event, "You're not in a voice channel!");
       }
     }
+  }
+
+  private static void leave(MessageCreateEvent event) {
+
   }
 
   /**
