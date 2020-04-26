@@ -12,6 +12,7 @@ import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.VoiceChannel;
 import discord4j.voice.AudioProvider;
+import discord4j.voice.VoiceConnection;
 import reactor.core.publisher.Mono;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
@@ -26,7 +27,7 @@ public class Bot {
   private static final TrackScheduler trackSched;
   private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
   private static String prefix = "!", content = "";
-  private static VoiceChannel joined = null;
+  private static VoiceConnection joined = null;
 
   static {
     //initialize objects required for audio
@@ -121,8 +122,7 @@ public class Bot {
       if (voiceState != null) {
         final VoiceChannel channel = voiceState.getChannel().block();
         if (channel != null) {
-          channel.join(spec -> spec.setProvider(audioPro)).block();
-          joined = channel;
+          joined = channel.join(spec -> spec.setProvider(audioPro)).block();
           sendMessage(event, String.format("Joined voice channel: %s!", channel.getMention()));
         }
       } else {
@@ -131,8 +131,14 @@ public class Bot {
     }
   }
 
+  /**
+   * Leave the voice channel.
+   *
+   * @param event the messageEvent
+   */
   private static void leave(MessageCreateEvent event) {
-
+    joined.disconnect();
+    sendMessage(event, "Leaving voice channel.");
   }
 
   /**
