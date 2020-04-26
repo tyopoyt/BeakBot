@@ -33,7 +33,22 @@ public final class TrackScheduler implements AudioLoadResultHandler {
     // LavaPlayer could not parse an audio source for some reason
   }
 
+  //stop the currently playing track.
   public void stopTrack() {
     player.stopTrack();
+  }
+
+  //pause the track
+  public void pauseTrack(){
+    player.setPaused(true);
+  }
+
+  //resume the track
+  public boolean resumeTrack(){
+    boolean paused = player.isPaused();
+    if (paused) {
+      player.setPaused(false);
+    }
+    return paused;
   }
 }

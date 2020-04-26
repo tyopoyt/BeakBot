@@ -167,4 +167,28 @@ public class Bot {
     trackSched.stopTrack();
     sendMessage(event, "Playback stopped.");
   }
+
+  /**
+   * Pause the track.
+   *
+   * @param event the messageEvent
+   */
+  private static void pause(MessageCreateEvent event) {
+    trackSched.pauseTrack();
+    sendMessage(event, "Pausing audio playback.");
+  }
+
+  /**
+   * Resume the paused track, if any.
+   *
+   * @param event the messageEvent
+   */
+  private static void resume(MessageCreateEvent event) {
+    if (trackSched.resumeTrack()) {
+      sendMessage(event, "Playback resumed.");
+    } else {
+      sendMessage(event, "No playback to resume.");
+    }
+  }
+
 }
