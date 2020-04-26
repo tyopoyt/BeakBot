@@ -53,6 +53,10 @@ public class Bot {
     commands.put("stop", Bot::stop);
 
     commands.put("leave", Bot::leave);
+
+    commands.put("pause", Bot::pause);
+
+    commands.put("resume", Bot::resume);
   }
 
   /**
@@ -139,6 +143,7 @@ public class Bot {
   private static void leave(MessageCreateEvent event) {
     joined.disconnect();
     sendMessage(event, "Leaving voice channel.");
+    stop(event);
   }
 
   /**
