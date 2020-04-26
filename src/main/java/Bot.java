@@ -77,7 +77,7 @@ public class Bot {
               Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
               boolean contained = wblist.contains(channel);
               if ((wblist.isWhiteList() && contained) || (wblist.isBlackList() &&
-                              !contained) || wblist.isEmpty()) {
+                              !contained) || wblist.isEmpty() || commandOverride(content)) {
                 for (final Map.Entry<String, Command> entry : commands.entrySet()) {
                   if (content.startsWith(prefix + entry.getKey())) {
                     entry.getValue().execute(event);
@@ -90,6 +90,24 @@ public class Bot {
     wblist = new WBList<>(true);
 
     client.login().block();
+  }
+
+  /**
+   * Return whether this is a command that should override white/blacklist settings.
+   *
+   * @param content the command to check
+   * @return whether this command should be granted an override
+   */
+  private static boolean commandOverride(String content) {
+    boolean override = false;
+    if (content.startsWith(prefix + "whitelist")) {
+      override = true;
+    } else if (content.startsWith(prefix + "blacklist")) {
+      override = true;
+    } else if (content.startsWith(prefix + "clearlist")) {
+      override = true;
+    }
+    return override;
   }
 
   /**
