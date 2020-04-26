@@ -8,12 +8,11 @@ import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.VoiceState;
 import discord4j.core.object.entity.Member;
-import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.VoiceChannel;
+import discord4j.core.object.util.Snowflake;
 import discord4j.voice.AudioProvider;
 import discord4j.voice.VoiceConnection;
-import reactor.core.publisher.Mono;
+
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -28,6 +27,7 @@ public class Bot {
   private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
   private static String prefix = "!", content = "";
   private static VoiceConnection joined = null;
+  private static WBList<Snowflake> wblist;
 
   static {
     //initialize objects required for audio
@@ -88,7 +88,12 @@ public class Bot {
    * @param message the message to send
    */
   private static void sendMessage(MessageCreateEvent event, String message) {
-    Objects.requireNonNull(event.getMessage().getChannel().block()).createMessage(message).block();
+    Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
+    boolean contained = wblist.contains(channel);
+    if ((wblist.isWhiteList() && contained) || (wblist.isBlackList() &&
+            !contained) || wblist.isEmpty()) {
+      Objects.requireNonNull(event.getMessage().getChannel().block()).createMessage(message).block();
+    }
   }
 
   /**

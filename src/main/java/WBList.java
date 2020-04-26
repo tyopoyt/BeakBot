@@ -20,6 +20,24 @@ public class WBList<T> {
   }
 
   /**
+   * Accessor for isWhitelist.
+   *
+   * @return if this is a whitelist
+   */
+  public boolean isWhiteList() {
+    return isWhiteList;
+  }
+
+  /**
+   * Accessor for isBlackList.
+   *
+   * @return if this is a blacklist
+   */
+  public boolean isBlackList() {
+    return isBlackList;
+  }
+
+  /**
    * Add an element to this WBList
    *
    * @param element what to add
@@ -56,4 +74,27 @@ public class WBList<T> {
     this.isBlackList = !isWhiteList;
   }
 
+  /**
+   * Check if an element exists in this WBList.
+   *
+   * @param element element to look for
+   * @return if the element is contained
+   */
+  public boolean contains(T element) {
+    return list.contains(element);
+  }
+
+  @Override
+  public String toString() {
+    return list.toString();
+  }
+
+  /**
+   * Check if this WBList is empty.
+   *
+   * @return if it's empty
+   */
+  public boolean isEmpty() {
+    return list.size() == 0;
+  }
 }
