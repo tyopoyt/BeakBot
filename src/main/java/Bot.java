@@ -8,6 +8,8 @@ import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.VoiceState;
 import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.VoiceChannel;
 import discord4j.core.object.util.Snowflake;
 import discord4j.voice.AudioProvider;
@@ -57,6 +59,8 @@ public class Bot {
     commands.put("pause", Bot::pause);
 
     commands.put("resume", Bot::resume);
+
+    commands.put("whitelist", Bot::whitelist);
   }
 
   /**
@@ -70,13 +74,20 @@ public class Bot {
     client.getEventDispatcher().on(MessageCreateEvent.class)
             .subscribe(event -> {
               content = event.getMessage().getContent().orElse("");
-              for (final Map.Entry<String, Command> entry : commands.entrySet()) {
-                if (content.startsWith(prefix + entry.getKey())) {
-                  entry.getValue().execute(event);
-                  break;
+              Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
+              boolean contained = wblist.contains(channel);
+              if ((wblist.isWhiteList() && contained) || (wblist.isBlackList() &&
+                              !contained) || wblist.isEmpty()) {
+                for (final Map.Entry<String, Command> entry : commands.entrySet()) {
+                  if (content.startsWith(prefix + entry.getKey())) {
+                    entry.getValue().execute(event);
+                    break;
+                  }
                 }
               }
             });
+
+    wblist = new WBList<>(true);
 
     client.login().block();
   }
@@ -88,12 +99,7 @@ public class Bot {
    * @param message the message to send
    */
   private static void sendMessage(MessageCreateEvent event, String message) {
-    Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
-    boolean contained = wblist.contains(channel);
-    if ((wblist.isWhiteList() && contained) || (wblist.isBlackList() &&
-            !contained) || wblist.isEmpty()) {
       Objects.requireNonNull(event.getMessage().getChannel().block()).createMessage(message).block();
-    }
   }
 
   /**
@@ -212,4 +218,23 @@ public class Bot {
     }
   }
 
+  /**
+   * Add a channel to whitelist.
+   *
+   * @param event the messageEvent
+   */
+  private static void whitelist(MessageCreateEvent event) {
+    Message message = event.getMessage();
+    if (wblist.isWhiteList()) {
+      if (!wblist.contains(message.getChannelId())) {
+        wblist.add(message.getChannelId());
+        sendMessage(event, "Successfully whitelisted this channel.");
+      } else {
+        sendMessage(event, "This channel is already whitelisted.");
+      }
+    } else {
+      sendMessage(event, "Currently using a blacklist.\nTo change to a whitelist try "
+                                  + prefix + "clearList black");
+    }
+  }
 }
