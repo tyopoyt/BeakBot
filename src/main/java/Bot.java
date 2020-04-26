@@ -5,7 +5,6 @@ import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.track.playback.NonAllocatingAudioFrameBuffer;
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
-import discord4j.core.event.domain.Event;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.VoiceState;
 import discord4j.core.object.entity.Member;
@@ -50,6 +49,8 @@ public class Bot {
     commands.put("join", Bot::join);
 
     commands.put("stop", Bot::stop);
+
+    //commands.put("leave", Bot::leave);
   }
 
   /**
@@ -120,7 +121,10 @@ public class Bot {
         final VoiceChannel channel = voiceState.getChannel().block();
         if (channel != null) {
           channel.join(spec -> spec.setProvider(audioPro)).block();
+          sendMessage(event, String.format("Joined voice channel: %s!", channel.getMention()));
         }
+      } else {
+        sendMessage(event, "You're not in a voice channel!");
       }
     }
   }
@@ -136,8 +140,9 @@ public class Bot {
       content = event.getMessage().getContent().get();
       final List<String> command = Arrays.asList(content.split(" "));
       audioMan.loadItem(command.get(1), trackSched);
+      sendMessage(event, "Now playing!");
     } else {
-      System.out.println("oof");
+      sendMessage(event, "Content not present... whatever that means...");
     }
   }
 
@@ -148,5 +153,6 @@ public class Bot {
    */
   private static void stop(MessageCreateEvent event) {
     trackSched.stopTrack();
+    sendMessage(event, "Playback stopped.");
   }
 }
