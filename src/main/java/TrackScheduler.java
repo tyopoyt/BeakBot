@@ -51,4 +51,10 @@ public final class TrackScheduler implements AudioLoadResultHandler {
     }
     return paused;
   }
+
+  //check if a track is playing
+  public boolean isPlaying() {
+    return player.getPlayingTrack() != null;
+  }
+
 }
