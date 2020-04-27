@@ -15,294 +15,314 @@ import discord4j.core.object.util.Snowflake;
 import discord4j.voice.AudioProvider;
 import discord4j.voice.VoiceConnection;
 
+
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.util.*;
 
 public class Bot {
 
-  private static final Map<String, Command> commands = new HashMap<>();
-  private static final AudioPlayerManager audioMan;
-  private static final AudioPlayer player;
-  private static final AudioProvider audioPro;
-  private static final TrackScheduler trackSched;
-  private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
-  private static String prefix = "!", content = "";
-  private static VoiceConnection joined = null;
-  private static WBList<Snowflake> wblist;
+    private static final Map<String, Command> commands = new HashMap<>();
+    private static final AudioPlayerManager audioMan;
+    private static final AudioPlayer player;
+    private static final AudioProvider audioPro;
+    private static final TrackScheduler trackSched;
+    private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
+    private static String prefix = "!", content = "";
+    private static VoiceConnection joined = null;
+    private static WBList<Snowflake> wblist;
+    private static boolean joinBool;
 
-  static {
-    //initialize objects required for audio
-    audioMan = new DefaultAudioPlayerManager();
-    audioMan.getConfiguration().setFrameBufferFactory(NonAllocatingAudioFrameBuffer::new);
-    AudioSourceManagers.registerRemoteSources(audioMan);
-    player = audioMan.createPlayer();
-    audioPro = new LavaPlayerAudioProvider(player);
-    trackSched = new TrackScheduler(player);
 
-    //add commands to our command map
-    commands.put("ping", event -> Objects.requireNonNull(event.getMessage()
-            .getChannel().block()).createMessage("Pong!").block());
 
-    commands.put("prefix ", Bot::setPrefix);
+    static {
+        //initialize objects required for audio
+        audioMan = new DefaultAudioPlayerManager();
+        audioMan.getConfiguration().setFrameBufferFactory(NonAllocatingAudioFrameBuffer::new);
+        AudioSourceManagers.registerRemoteSources(audioMan);
+        player = audioMan.createPlayer();
+        audioPro = new LavaPlayerAudioProvider(player);
+        trackSched = new TrackScheduler(player);
 
-    commands.put("localtime", Bot::tellTime);
+        //add commands to our command map
+        commands.put("ping", event -> Objects.requireNonNull(event.getMessage()
+                .getChannel().block()).createMessage("Pong!").block());
 
-    commands.put("play", Bot::play);
+        commands.put("prefix ", Bot::setPrefix);
 
-    commands.put("join", Bot::join);
+        commands.put("localtime", Bot::tellTime);
 
-    commands.put("stop", Bot::stop);
+        commands.put("play", Bot::play);
 
-    commands.put("leave", Bot::leave);
+        commands.put("join", Bot::join);
 
-    commands.put("pause", Bot::pause);
+        commands.put("stop", Bot::stop);
 
-    commands.put("resume", Bot::resume);
+        commands.put("leave", Bot::leave);
 
-    commands.put("whitelist", Bot::whitelist);
+        commands.put("pause", Bot::pause);
 
-    commands.put("blacklist", Bot::blacklist);
+        commands.put("resume", Bot::resume);
 
-    commands.put("clearlist", Bot::clearlist);
-  }
+        commands.put("whitelist", Bot::whitelist);
 
-  /**
-   * Main method.
-   *
-   * @param args command-line arguments
-   */
-  public static void main(String[] args) {
-    final DiscordClient client = DiscordClientBuilder.create(args[0]).build();
+        commands.put("blacklist", Bot::blacklist);
 
-    client.getEventDispatcher().on(MessageCreateEvent.class)
-            .subscribe(event -> {
-              content = event.getMessage().getContent().orElse("");
-              Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
-              boolean contained = wblist.contains(channel);
-              if ((wblist.isWhiteList() && contained) || (wblist.isBlackList() &&
-                              !contained) || wblist.isEmpty() || commandOverride(content)) {
-                for (final Map.Entry<String, Command> entry : commands.entrySet()) {
-                  if (content.startsWith(prefix + entry.getKey())) {
-                    entry.getValue().execute(event);
-                    break;
-                  }
+        commands.put("clearlist", Bot::clearlist);
+
+        commands.put("help", Bot::help);
+
+
+    }
+
+    /**
+     * Main method.
+     *
+     * @param args command-line arguments
+     */
+    public static void main(String[] args) {
+        final DiscordClient client = DiscordClientBuilder.create(args[0]).build();
+        joinBool = false;
+        client.getEventDispatcher().on(MessageCreateEvent.class)
+                .subscribe(event -> {
+                    content = event.getMessage().getContent().orElse("");
+                    Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
+                    boolean contained = wblist.contains(channel);
+                    if ((wblist.isWhiteList() && contained) || (wblist.isBlackList() &&
+                            !contained) || wblist.isEmpty() || commandOverride(content)) {
+                        for (final Map.Entry<String, Command> entry : commands.entrySet()) {
+                            if (content.startsWith(prefix + entry.getKey())) {
+                                entry.getValue().execute(event);
+                                break;
+                            }
+                        }
+                    }
+                });
+
+        wblist = new WBList<>(true);
+
+
+
+        client.login().block();
+    }
+
+    /**
+     * Return whether this is a command that should override white/blacklist settings.
+     *
+     * @param content the command to check
+     * @return whether this command should be granted an override
+     */
+    private static boolean commandOverride(String content) {
+        boolean override = false;
+        if (content.startsWith(prefix + "whitelist")) {
+            override = true;
+        } else if (content.startsWith(prefix + "blacklist")) {
+            override = true;
+        } else if (content.startsWith(prefix + "clearlist")) {
+            override = true;
+        }
+        return override;
+    }
+
+    /**
+     * Send a message in a channel.
+     *
+     * @param event   the messageEvent
+     * @param message the message to send
+     */
+    private static void sendMessage(MessageCreateEvent event, String message) {
+        Objects.requireNonNull(event.getMessage().getChannel().block()).createMessage(message).block();
+    }
+
+    /**
+     * Change the prefix for the bot.
+     *
+     * @param event the event triggering this call
+     */
+    private static void setPrefix(MessageCreateEvent event) {
+        try {
+            prefix = content.substring(prefix.length() + "prefix ".length());
+            sendMessage(event, "Prefix set to " + prefix);
+        } catch (StringIndexOutOfBoundsException e) {
+            sendMessage(event, "Error setting prefix! Kept as: " + prefix);
+        }
+    }
+
+    /**
+     * Send a message telling the time in the bot's timezone.
+     *
+     * @param event the messageEvent
+     */
+    private static void tellTime(MessageCreateEvent event) {
+        sendMessage(event, "Bot's local time is: " + dtf.format(LocalDateTime.now()));
+    }
+
+    /**
+     * Join a user's voice channel.
+     *
+     * @param event the messageEvent
+     */
+    private static void join(MessageCreateEvent event) {
+        final Member member = event.getMember().orElse(null);
+        if (member != null) {
+            final VoiceState voiceState = member.getVoiceState().block();
+            if (voiceState != null) {
+                final VoiceChannel channel = voiceState.getChannel().block();
+                if (channel != null) {
+                    if(joinBool){joined.disconnect();}
+                    joined = channel.join(spec -> spec.setProvider(audioPro)).block();
+                    joinBool = true;
+                    sendMessage(event, String.format("Joined voice channel: %s!", channel.getMention()));
                 }
-              }
-            });
-
-    wblist = new WBList<>(true);
-
-    client.login().block();
-  }
-
-  /**
-   * Return whether this is a command that should override white/blacklist settings.
-   *
-   * @param content the command to check
-   * @return whether this command should be granted an override
-   */
-  private static boolean commandOverride(String content) {
-    boolean override = false;
-    if (content.startsWith(prefix + "whitelist")) {
-      override = true;
-    } else if (content.startsWith(prefix + "blacklist")) {
-      override = true;
-    } else if (content.startsWith(prefix + "clearlist")) {
-      override = true;
-    }
-    return override;
-  }
-
-  /**
-   * Send a message in a channel.
-   *
-   * @param event the messageEvent
-   * @param message the message to send
-   */
-  private static void sendMessage(MessageCreateEvent event, String message) {
-      Objects.requireNonNull(event.getMessage().getChannel().block()).createMessage(message).block();
-  }
-
-  /**
-   * Change the prefix for the bot.
-   *
-   * @param event the event triggering this call
-   */
-  private static void setPrefix(MessageCreateEvent event) {
-    try {
-      prefix = content.substring(prefix.length() + "prefix ".length());
-      sendMessage(event,"Prefix set to " + prefix);
-    } catch (StringIndexOutOfBoundsException e) {
-      sendMessage(event,"Error setting prefix! Kept as: " + prefix);
-    }
-  }
-
-  /**
-   * Send a message telling the time in the bot's timezone.
-   *
-   * @param event the messageEvent
-   */
-  private static void tellTime(MessageCreateEvent event) {
-    sendMessage(event, "Bot's local time is: " + dtf.format(LocalDateTime.now()));
-  }
-
-  /**
-   * Join a user's voice channel.
-   *
-   * @param event the messageEvent
-   */
-  private static void join(MessageCreateEvent event) {
-    final Member member = event.getMember().orElse(null);
-    if (member != null) {
-      final VoiceState voiceState = member.getVoiceState().block();
-      if (voiceState != null) {
-        final VoiceChannel channel = voiceState.getChannel().block();
-        if (channel != null) {
-          joined = channel.join(spec -> spec.setProvider(audioPro)).block();
-          sendMessage(event, String.format("Joined voice channel: %s!", channel.getMention()));
+            } else {
+                sendMessage(event, "You're not in a voice channel!");
+            }
         }
-      } else {
-        sendMessage(event, "You're not in a voice channel!");
-      }
     }
-  }
 
-  /**
-   * Leave the voice channel.
-   *
-   * @param event the messageEvent
-   */
-  private static void leave(MessageCreateEvent event) {
-    joined.disconnect();
-    sendMessage(event, "Leaving voice channel.");
-    stop(event);
-  }
+    /**
+     * Leave the voice channel.
+     *
+     * @param event the messageEvent
+     */
+    private static void leave(MessageCreateEvent event) {
+        joined.disconnect();
+        joinBool = false;
+        sendMessage(event, "Leaving voice channel.");
+        stop(event);
+    }
 
-  /**
-   * Play audio in joined channel.
-   *
-   * @param event the messageEvent
-   */
-  private static void play(MessageCreateEvent event) {
-    if (trackSched.resumeTrack()) {
-      sendMessage(event, "Playback resumed.");
-    } else {
-      final String content;
-      if (event.getMessage().getContent().isPresent()) {
-        content = event.getMessage().getContent().get();
-        final List<String> command = Arrays.asList(content.split(" "));
-
-        if (command.size() != 2) {
-          sendMessage(event, String.format("Improper syntax.\n\nTry: %splay [link]", prefix));
+    /**
+     * Play audio in joined channel.
+     *
+     * @param event the messageEvent
+     */
+    private static void play(MessageCreateEvent event) {
+       if (trackSched.resumeTrack()) {
+            sendMessage(event, "Playback resumed.");
         } else {
-          audioMan.loadItem(command.get(1), trackSched);
-          sendMessage(event, "Now playing!");
+            final String content;
+            if (event.getMessage().getContent().isPresent()) {
+                content = event.getMessage().getContent().get();
+                final List<String> command = Arrays.asList(content.split(" "));
+
+                if (command.size() != 2) {
+                    sendMessage(event, String.format("Improper syntax.\n\nTry: %splay [link]", prefix));
+                } else {
+                    audioMan.loadItem(command.get(1), trackSched);
+
+
+                    sendMessage(event, "Now playing!");
+                }
+            } else {
+                sendMessage(event, "Content not present... whatever that means...");
+            }
         }
-      } else {
-        sendMessage(event, "Content not present... whatever that means...");
-      }
     }
-  }
 
-  /**
-   * Stop the currently playing track.
-   *
-   * @param event the messageEvent
-   */
-  private static void stop(MessageCreateEvent event) {
-    trackSched.stopTrack();
-    sendMessage(event, "Playback stopped.");
-  }
-
-  /**
-   * Pause the track.
-   *
-   * @param event the messageEvent
-   */
-  private static void pause(MessageCreateEvent event) {
-    trackSched.pauseTrack();
-    sendMessage(event, "Pausing audio playback.");
-  }
-
-  /**
-   * Resume the paused track, if any.
-   *
-   * @param event the messageEvent
-   */
-  private static void resume(MessageCreateEvent event) {
-    if (trackSched.resumeTrack()) {
-      sendMessage(event, "Playback resumed.");
-    } else {
-      sendMessage(event, "No playback to resume.");
+    /**
+     * Stop the currently playing track.
+     *
+     * @param event the messageEvent
+     */
+    private static void stop(MessageCreateEvent event) {
+        trackSched.stopTrack();
+        sendMessage(event, "Playback stopped.");
     }
-  }
 
-  /**
-   * Add a channel to whitelist.
-   *
-   * @param event the messageEvent
-   */
-  private static void whitelist(MessageCreateEvent event) {
-    Message message = event.getMessage();
-    if (wblist.isWhiteList() || wblist.isEmpty()) {
-      if (!wblist.contains(message.getChannelId())) {
-        wblist.add(message.getChannelId());
-        sendMessage(event, "Successfully whitelisted this channel.");
-      } else {
-        sendMessage(event, "This channel is already whitelisted.");
-      }
-    } else {
-      sendMessage(event, "Currently using a blacklist.\nTo change to a whitelist try "
-                                  + prefix + "clearlist white");
+    /**
+     * Pause the track.
+     *
+     * @param event the messageEvent
+     */
+    private static void pause(MessageCreateEvent event) {
+        trackSched.pauseTrack();
+        sendMessage(event, "Pausing audio playback.");
     }
-  }
 
-  /**
-   * Add a channel to blackList.
-   *
-   * @param event the messageEvent
-   */
-  private static void blacklist(MessageCreateEvent event) {
-    Message message = event.getMessage();
-    if (wblist.isBlackList() || wblist.isEmpty()) {
-      if (wblist.isWhiteList()) {
-        wblist.reset(false);
-      }
-      if (!wblist.contains(message.getChannelId())) {
-        wblist.add(message.getChannelId());
-        sendMessage(event, "Successfully blacklisted this channel.");
-      } else {
-        sendMessage(event, "This channel is already blacklisted.");
-      }
-    } else {
-      sendMessage(event, "Currently using a whitelist.\nTo change to a blacklist try "
-              + prefix + "clearlist black");
+    /**
+     * Resume the paused track, if any.
+     *
+     * @param event the messageEvent
+     */
+    private static void resume(MessageCreateEvent event) {
+        if (trackSched.resumeTrack()) {
+            sendMessage(event, "Playback resumed.");
+        } else {
+            sendMessage(event, "No playback to resume.");
+        }
     }
-  }
 
-  /**
-   * Reset the WBList.
-   *
-   * @param event the messageEvent
-   */
-  private static void clearlist(MessageCreateEvent event) {
-    final String content;
-    if (event.getMessage().getContent().isPresent()) {
-      content = event.getMessage().getContent().get();
-      final List<String> command = Arrays.asList(content.split(" "));
-      if (command.size() != 2
-              || !(command.get(1).equals("black") || command.get(1).equals("white"))) {
-        sendMessage(event, String.format("Improper syntax.\n\nTry: %sclearlist [black/white]",
-                                                                                          prefix));
-      } else {
-        boolean action = command.get(1).equals("white");
-        wblist.reset(action);
-        sendMessage(event, String.format("Successfully reset list to %slist.",
-                action? "white" : "black"));
-      }
-    } else {
-      sendMessage(event, "Content not present... whatever that means...");
+    /**
+     * Add a channel to whitelist.
+     *
+     * @param event the messageEvent
+     */
+    private static void whitelist(MessageCreateEvent event) {
+        Message message = event.getMessage();
+        if (wblist.isWhiteList() || wblist.isEmpty()) {
+            if (!wblist.contains(message.getChannelId())) {
+                wblist.add(message.getChannelId());
+                sendMessage(event, "Successfully whitelisted this channel.");
+            } else {
+                sendMessage(event, "This channel is already whitelisted.");
+            }
+        } else {
+            sendMessage(event, "Currently using a blacklist.\nTo change to a whitelist try "
+                    + prefix + "clearlist white");
+        }
     }
-  }
+
+    /**
+     * Add a channel to blackList.
+     *
+     * @param event the messageEvent
+     */
+    private static void blacklist(MessageCreateEvent event) {
+        Message message = event.getMessage();
+        if (wblist.isBlackList() || wblist.isEmpty()) {
+            if (wblist.isWhiteList()) {
+                wblist.reset(false);
+            }
+            if (!wblist.contains(message.getChannelId())) {
+                wblist.add(message.getChannelId());
+                sendMessage(event, "Successfully blacklisted this channel.");
+            } else {
+                sendMessage(event, "This channel is already blacklisted.");
+            }
+        } else {
+            sendMessage(event, "Currently using a whitelist.\nTo change to a blacklist try "
+                    + prefix + "clearlist black");
+        }
+    }
+
+    /**
+     * Reset the WBList.
+     *
+     * @param event the messageEvent
+     */
+    private static void clearlist(MessageCreateEvent event) {
+        final String content;
+        if (event.getMessage().getContent().isPresent()) {
+            content = event.getMessage().getContent().get();
+            final List<String> command = Arrays.asList(content.split(" "));
+            if (command.size() != 2
+                    || !(command.get(1).equals("black") || command.get(1).equals("white"))) {
+                sendMessage(event, String.format("Improper syntax.\n\nTry: %sclearlist [black/white]",
+                        prefix));
+            } else {
+                boolean action = command.get(1).equals("white");
+                wblist.reset(action);
+                sendMessage(event, String.format("Successfully reset list to %slist.",
+                        action ? "white" : "black"));
+            }
+        } else {
+            sendMessage(event, "Content not present... whatever that means...");
+        }
+    }
+
+    private static void help(MessageCreateEvent event) {
+        sendMessage(event, "Hi I'm Beak!\nHere is a list of my commands!\n```setPrefix\t\tChanges my prefix\ntellTime\t\tGives you my Clock time\njoin\t\t\tJoins the Voice Channel you are in\nleave\t\t\tLeaves the voice channel\nplay\t\t\tPlays the requested song\npause\t\t\tPauses the current song\nstop\t\t\tStops playing the song\nresume\t\t\tResumes a paused song\nwhitelist\t\tAdds a channel to the whitelist\nblacklist\t\tAdds a channel to the blacklist\nclearlist\t\tClears either the white or black list```");
+    }
+
 }
