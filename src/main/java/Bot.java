@@ -331,8 +331,8 @@ public class Bot {
                 "Here is a list of my commands!\n" +
                 "```css\n" +
                 "#ping [none] pong\n" +
-                "#setPrefix [none] Changes my prefix\n" +
-                "#tellTime [none] Gives you my clock time\n" +
+                "#prefix [none] Changes my prefix\n" +
+                "#localtime [none] Gives you my clock time\n" +
                 "#join [none] Joins the voice channel you are in\n" +
                 "#leave [none] Leaves the voice channel\n" +
                 "#play [Song link] Plays the requested song, will end the current song to play it\n" +
