@@ -11,6 +11,8 @@ import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.VoiceChannel;
+import discord4j.core.object.presence.Activity;
+import discord4j.core.object.presence.Presence;
 import discord4j.core.object.util.Snowflake;
 import discord4j.voice.AudioProvider;
 import discord4j.voice.VoiceConnection;
@@ -32,6 +34,7 @@ public class Bot {
     private static VoiceConnection joined = null;
     private static WBList<Snowflake> wblist;
     private static boolean joinBool;
+    private static DiscordClient client;
 
 
 
@@ -43,6 +46,7 @@ public class Bot {
         player = audioMan.createPlayer();
         audioPro = new LavaPlayerAudioProvider(player);
         trackSched = new TrackScheduler(player);
+
 
         //add commands to our command map
         commands.put("ping", event -> Objects.requireNonNull(event.getMessage()
@@ -71,8 +75,6 @@ public class Bot {
         commands.put("clearlist", Bot::clearlist);
 
         commands.put("help", Bot::help);
-
-
     }
 
     /**
@@ -81,7 +83,9 @@ public class Bot {
      * @param args command-line arguments
      */
     public static void main(String[] args) {
-        final DiscordClient client = DiscordClientBuilder.create(args[0]).build();
+        final DiscordClientBuilder builder = DiscordClientBuilder.create(args[0]);
+        builder.setInitialPresence(Presence.online(Activity.listening(prefix + "commands")));
+        client = builder.build();
         joinBool = false;
         client.getEventDispatcher().on(MessageCreateEvent.class)
                 .subscribe(event -> {
@@ -100,9 +104,6 @@ public class Bot {
                 });
 
         wblist = new WBList<>(true);
-
-
-
         client.login().block();
     }
 
@@ -143,6 +144,7 @@ public class Bot {
         try {
             prefix = content.substring(prefix.length() + "prefix ".length());
             sendMessage(event, "Prefix set to " + prefix);
+            client.updatePresence(Presence.online(Activity.listening(prefix + "help"))).block();
         } catch (StringIndexOutOfBoundsException e) {
             sendMessage(event, "Error setting prefix! Kept as: " + prefix);
         }
@@ -329,8 +331,8 @@ public class Bot {
                 "Here is a list of my commands!\n" +
                 "```css\n" +
                 "#ping [none] pong\n" +
-                "#setPrefix [none] Changes my prefix\n" +
-                "#tellTime [none] Gives you my clock time\n" +
+                "#prefix [none] Changes my prefix\n" +
+                "#localtime [none] Gives you my clock time\n" +
                 "#join [none] Joins the voice channel you are in\n" +
                 "#leave [none] Leaves the voice channel\n" +
                 "#play [Song link] Plays the requested song, will end the current song to play it\n" +
