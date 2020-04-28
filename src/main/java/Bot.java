@@ -261,6 +261,9 @@ public class Bot {
     private static void whitelist(MessageCreateEvent event) {
         Message message = event.getMessage();
         if (wblist.isWhiteList() || wblist.isEmpty()) {
+            if (wblist.isEmpty()) {
+                wblist.reset(true);
+            }
             if (!wblist.contains(message.getChannelId())) {
                 wblist.add(message.getChannelId());
                 sendMessage(event, "Successfully whitelisted this channel.");
@@ -322,7 +325,21 @@ public class Bot {
     }
 
     private static void help(MessageCreateEvent event) {
-        sendMessage(event, "Hi I'm Beak!\nHere is a list of my commands!\n```setPrefix\t\tChanges my prefix\ntellTime\t\tGives you my Clock time\njoin\t\t\tJoins the Voice Channel you are in\nleave\t\t\tLeaves the voice channel\nplay\t\t\tPlays the requested song\npause\t\t\tPauses the current song\nstop\t\t\tStops playing the song\nresume\t\t\tResumes a paused song\nwhitelist\t\tAdds a channel to the whitelist\nblacklist\t\tAdds a channel to the blacklist\nclearlist\t\tClears either the white or black list```");
+        sendMessage(event, "Hi I'm BeakBot!\n" +
+                "Here is a list of my commands!\n" +
+                "```css\n" +
+                "#ping [none] pong\n" +
+                "#setPrefix [none] Changes my prefix\n" +
+                "#tellTime [none] Gives you my clock time\n" +
+                "#join [none] Joins the voice channel you are in\n" +
+                "#leave [none] Leaves the voice channel\n" +
+                "#play [Song link] Plays the requested song, will end the current song to play it\n" +
+                "#pause [none] Pauses the current song\n" +
+                "#stop [none] Stops playing the song\n" +
+                "#resume [none] Resumes a paused song\n" +
+                "#whitelist [none] Adds this channel to the whitelist, this is the default list, and empty by default\n" +
+                "#blacklist [none] Adds this channel to the blacklist\n" +
+                "#clearlist [blacklist/whitelist] Clears either the white or black list, then makes that list the one in use```");
     }
 
 }
