@@ -261,6 +261,9 @@ public class Bot {
     private static void whitelist(MessageCreateEvent event) {
         Message message = event.getMessage();
         if (wblist.isWhiteList() || wblist.isEmpty()) {
+            if (wblist.isEmpty()) {
+                wblist.reset(true);
+            }
             if (!wblist.contains(message.getChannelId())) {
                 wblist.add(message.getChannelId());
                 sendMessage(event, "Successfully whitelisted this channel.");
