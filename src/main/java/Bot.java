@@ -22,14 +22,31 @@ import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.util.*;
 
-public class Bot {
+import org.json.JSONObject;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import static java.nio.file.StandardOpenOption.APPEND;
+import static java.nio.file.StandardOpenOption.CREATE;
+
+
+public class Bot extends HttpServlet {
 
     private static final Map<String, Command> commands = new HashMap<>();
     private static final AudioPlayerManager audioMan;
     private static final AudioPlayer player;
     private static final AudioProvider audioPro;
-    private static final TrackScheduler trackSched;
+    private static final TrackScheduler trackSched; 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
+    private static Message initMessage;
     private static String prefix = "!", content = "";
     private static VoiceConnection joined = null;
     private static WBList<Snowflake> wblist;
@@ -46,7 +63,8 @@ public class Bot {
         player = audioMan.createPlayer();
         audioPro = new LavaPlayerAudioProvider(player);
         trackSched = new TrackScheduler(player);
-
+        
+        
 
         //add commands to our command map
         commands.put("ping", event -> Objects.requireNonNull(event.getMessage()
@@ -75,6 +93,41 @@ public class Bot {
         commands.put("clearlist", Bot::clearlist);
 
         commands.put("help", Bot::help);
+        System.out.println("Program ended");
+        
+        String key = "NzAxMTAzMDk2ODc2NjMwMTM4.Xp9IRw._Tei7T0kCKF0Mv3A0boj9PDCa9Q"; 
+        final DiscordClientBuilder builder = DiscordClientBuilder.create(key);
+        builder.setInitialPresence(Presence.online(Activity.listening(prefix + "commands")));
+        client = builder.build();
+        joinBool = false;
+        client.getEventDispatcher().on(MessageCreateEvent.class)
+                .subscribe(event -> {
+                	//Creating a global event object for twitter functionality.
+                	initMessage = event.getMessage();
+                	
+                    content = event.getMessage().getContent().orElse("");
+                    Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
+                    boolean contained = wblist.contains(channel);
+                    if ((wblist.isWhiteList() && contained) || (wblist.isBlackList() &&
+                            !contained) || wblist.isEmpty() || commandOverride(content)) {
+                        for (final Map.Entry<String, Command> entry : commands.entrySet()) {
+                            if (content.startsWith(prefix + entry.getKey())) {
+                                entry.getValue().execute(event);
+                                break;
+                            }
+                        }
+                    }
+                });
+
+        wblist = new WBList<>(true);
+        //client.login().block();
+        System.out.println(client.isConnected());
+        client.login().block();
+        System.out.println(client.isConnected());
+        System.out.println(client.getResponseTime());
+        
+        
+        System.out.println("Login complete");
     }
 
     /**
@@ -83,12 +136,19 @@ public class Bot {
      * @param args command-line arguments
      */
     public static void main(String[] args) {
+    	System.out.println("Main Method");
+    }
+    /*
+    public static void main(String[] args) {
         final DiscordClientBuilder builder = DiscordClientBuilder.create(args[0]);
         builder.setInitialPresence(Presence.online(Activity.listening(prefix + "commands")));
         client = builder.build();
         joinBool = false;
         client.getEventDispatcher().on(MessageCreateEvent.class)
                 .subscribe(event -> {
+                	//Creating a global event object for twitter functionality.
+                	initMessage = event.getMessage();
+                	
                     content = event.getMessage().getContent().orElse("");
                     Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
                     boolean contained = wblist.contains(channel);
@@ -105,7 +165,63 @@ public class Bot {
 
         wblist = new WBList<>(true);
         client.login().block();
+    } */
+    
+    /**
+     * Action when the webhook listener receives a get response.
+     *
+     * @param HTTPs requests from other endpoints.
+     */
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    	response.setContentType("text/html");
+    	PrintWriter out = response.getWriter();
+    	out.println("<h3>Webhook Listener for BeakBot</h3>");
+    	out.println(client.getResponseTime());
+    	
     }
+    
+    /**
+     * Action when the webhook listener receives a get response.
+     *
+     * @param HTTPs requests from other endpoints.
+     */
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    	resp.setContentType("text/html");
+    	PrintWriter out = resp.getWriter();
+
+    	StringBuilder builder = new StringBuilder();
+    	String aux = "";
+
+    	while ((aux = req.getReader().readLine()) != null) {  
+    		builder.append(aux);
+    	}
+    	String payLoad = builder.toString();
+    	try {
+    		//Convert to Json
+    		JSONObject jsonPayLoad = new JSONObject(payLoad);
+    		String s = jsonPayLoad.toString() + System.lineSeparator();
+    		
+    		//write to stdout
+    		System.out.println("Received Payload:: " + jsonPayLoad.toString());
+    		
+    		//write to a Discord
+    		Objects.requireNonNull(initMessage.getChannel().block()).createMessage(s).block();
+    		
+    		//Write to local file.
+    		/*Path path = Paths.get(filePath);
+    		byte[] strToByte = s.getBytes();
+    		Files.write(path,strToByte,APPEND,CREATE);*/
+    		out.println("{\"success\":\"true\"}");
+    		
+    	} catch (Exception e) {
+    		// TODO Auto-generated catch block
+    		e.printStackTrace();
+    	}
+    }
+   
+    
 
     /**
      * Return whether this is a command that should override white/blacklist settings.
