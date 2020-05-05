@@ -93,9 +93,10 @@ public class Bot extends HttpServlet {
         commands.put("clearlist", Bot::clearlist);
 
         commands.put("help", Bot::help);
-        System.out.println("Program ended");
+
         
-        String key = "NzAxMTAzMDk2ODc2NjMwMTM4.Xp9IRw._Tei7T0kCKF0Mv3A0boj9PDCa9Q"; 
+        
+        /*
         final DiscordClientBuilder builder = DiscordClientBuilder.create(key);
         builder.setInitialPresence(Presence.online(Activity.listening(prefix + "commands")));
         client = builder.build();
@@ -127,7 +128,7 @@ public class Bot extends HttpServlet {
         System.out.println(client.getResponseTime());
         
         
-        System.out.println("Login complete");
+        System.out.println("Login complete");*/
     }
 
     /**
@@ -135,10 +136,6 @@ public class Bot extends HttpServlet {
      *
      * @param args command-line arguments
      */
-    public static void main(String[] args) {
-    	System.out.println("Main Method");
-    }
-    /*
     public static void main(String[] args) {
         final DiscordClientBuilder builder = DiscordClientBuilder.create(args[0]);
         builder.setInitialPresence(Presence.online(Activity.listening(prefix + "commands")));
@@ -148,7 +145,6 @@ public class Bot extends HttpServlet {
                 .subscribe(event -> {
                 	//Creating a global event object for twitter functionality.
                 	initMessage = event.getMessage();
-                	
                     content = event.getMessage().getContent().orElse("");
                     Snowflake channel = Objects.requireNonNull(event.getMessage().getChannelId());
                     boolean contained = wblist.contains(channel);
@@ -165,7 +161,7 @@ public class Bot extends HttpServlet {
 
         wblist = new WBList<>(true);
         client.login().block();
-    } */
+    }
     
     /**
      * Action when the webhook listener receives a get response.
