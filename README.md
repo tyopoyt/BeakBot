@@ -5,7 +5,7 @@ A Discord bot for streaming video to a discord call
 Command | Argument | What do
 ---         |---|---
 ping         | | pong
-setPrefix    | | Changes my prefix
+setPrefix    | new prefix | Changes my prefix
 tellTime     | | Gives you my clock time
 join         | | Joins the voice channel you are in
 leave        | | Leaves the voice channel

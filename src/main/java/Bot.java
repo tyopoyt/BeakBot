@@ -30,7 +30,7 @@ public class Bot {
     private static final AudioProvider audioPro;
     private static final TrackScheduler trackSched;
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
-    private static String prefix = "!", content = "";
+    private static String prefix = "|>", content = "";
     private static VoiceConnection joined = null;
     private static WBList<Snowflake> wblist;
     private static boolean joinBool;
@@ -200,7 +200,7 @@ public class Bot {
      * @param event the messageEvent
      */
     private static void play(MessageCreateEvent event) {
-       if (trackSched.resumeTrack()) {
+        if (trackSched.resumeTrack()) {
             sendMessage(event, "Playback resumed.");
         } else {
             final String content;
@@ -329,9 +329,10 @@ public class Bot {
     private static void help(MessageCreateEvent event) {
         sendMessage(event, "Hi I'm BeakBot!\n" +
                 "Here is a list of my commands!\n" +
+                "# stand for the current prefix\nwhich you can check by looking at my status message\n" +
                 "```css\n" +
                 "#ping [none] pong\n" +
-                "#prefix [none] Changes my prefix\n" +
+                "#prefix [new prefix] Changes my prefix\n" +
                 "#localtime [none] Gives you my clock time\n" +
                 "#join [none] Joins the voice channel you are in\n" +
                 "#leave [none] Leaves the voice channel\n" +
@@ -345,3 +346,6 @@ public class Bot {
     }
 
 }
+
+
+
